@@ -1,0 +1,310 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dynamic CSS variables for Light Mode and Gemini Deep Space Dark Mode */
+:root {
+  --m3-canvas: #F8F9FA;
+  --m3-surface: #FFFFFF;
+  --m3-text: #1F2937; /* Deep charcoal */
+  --m3-text-muted: #4B5563;
+  --m3-border: rgba(0, 0, 0, 0.05);
+  --tooltip-bg: rgba(255, 255, 255, 0.85);
+  --tooltip-border: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] {
+  --m3-canvas: #0B0D17;
+  --m3-surface: #131622;
+  --m3-text: #F3F4F6; /* Crisp off-white */
+  --m3-text-muted: #9CA3AF;
+  --m3-border: rgba(255, 255, 255, 0.05);
+  --tooltip-bg: rgba(19, 22, 34, 0.85);
+  --tooltip-border: rgba(255, 255, 255, 0.05);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--m3-canvas);
+  color: var(--m3-text);
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth global transitions for surfaces, colors and borders */
+.theme-transition {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Material 3 Expressive scrollbar — subtle cool grey & primary tone */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F4F6F8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E8DEF8;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6750A4;
+}
+
+/* Tabular nums utility applied globally to .font-mono */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Premium Scanlines effect */
+.crt-screen {
+  position: relative;
+  overflow: hidden;
+}
+.crt-screen::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(26, 26, 24, 0) 50%, rgba(26, 26, 24, 0.05) 50%), linear-gradient(90deg, rgba(26, 26, 24, 0.02), rgba(26, 26, 24, 0.01), rgba(26, 26, 24, 0.02));
+  z-index: 10;
+  background-size: 100% 3px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Flickering background animation */
+@keyframes crt-flicker {
+  0% { opacity: 0.985; }
+  50% { opacity: 0.995; }
+  100% { opacity: 0.985; }
+}
+
+.crt-flicker {
+  animation: crt-flicker 0.15s infinite;
+}
+
+/* Scanning laser line */
+@keyframes laser-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(300px); }
+}
+
+.laser-scanner {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: rgba(179, 36, 30, 0.25);
+  box-shadow: 0 0 8px 1px rgba(179, 36, 30, 0.4);
+  z-index: 12;
+  pointer-events: none;
+  animation: laser-scan 4s linear infinite;
+}
+
+/* ==========================================================================
+   Cricket Analytics Dashboard — Elegant Data Cards & Visualization Styles
+   ========================================================================== */
+
+/* 1. Elegant KPI Scorecards */
+.kpi-scorecard {
+  background: var(--m3-surface);
+  border-radius: 1rem; /* rounded-2xl */
+  padding: 1.5rem; /* p-6 */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 20px -2px rgba(103, 80, 164, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--m3-border);
+}
+
+.kpi-scorecard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #6750A4 0%, #D0BCFF 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kpi-scorecard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -4px rgba(103, 80, 164, 0.06), 0 4px 8px -2px rgba(0, 0, 0, 0.03);
+}
+
+.kpi-scorecard:hover::before {
+  opacity: 1;
+}
+
+.kpi-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.625rem; /* text-[10px] */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--m3-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kpi-number {
+  font-family: 'Inter', sans-serif;
+  font-size: 2.25rem; /* text-3xl / 36px */
+  font-weight: 800 !important; /* weighted aggressively */
+  letter-spacing: -0.025em;
+  color: var(--m3-text);
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 2.5rem;
+}
+
+.kpi-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.625rem; /* text-[10px] */
+  font-weight: 500;
+  color: var(--m3-text-muted);
+  background-color: var(--m3-border);
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem; /* px-2.5 py-0.5 */
+  width: fit-content;
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.kpi-label-group {
+  display: flex;
+  gap: 2rem; /* separated gracefully by ample whitespace (gap-8) */
+  margin-top: 1.25rem; /* mt-5 */
+}
+
+.kpi-micro-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-micro-label-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.5625rem; /* text-[9px] */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--m3-text-muted);
+}
+
+/* 2. Re-imagined Wagon Wheel Pitch Canvas */
+.wagon-wheel-canvas {
+  background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.wagon-wheel-canvas:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 15px 35px -8px rgba(0, 0, 0, 0.8), 0 0 15px 0 rgba(99, 102, 241, 0.05);
+}
+
+.wagon-wheel-pitch-ground {
+  width: 11rem; /* w-44 */
+  height: 11rem; /* h-44 */
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.7);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.wagon-wheel-crease {
+  position: absolute;
+  width: 0.5rem; /* w-2 */
+  height: 3.5rem; /* h-14 */
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.wagon-wheel-boundary-ring {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+
+.wagon-wheel-spoke {
+  stroke: rgba(255, 255, 255, 0.04);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+/* Glowing Neon Trajectory Arcs */
+.neon-glow-arc {
+  filter: drop-shadow(0 0 4px var(--glow-color)) drop-shadow(0 0 8px var(--glow-color));
+  stroke-linecap: round;
+  fill: none;
+  opacity: 0.95;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* 3. Pastel Chart Bar Legend Styles */
+.bar-legend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.bar-legend-dot-notout {
+  width: 0.625rem;
+  height: 0.625rem;
+  background-color: #81c784; /* Soft Sage Green */
+  border-radius: 50%;
+}
+
+.bar-legend-dot-dismissed {
+  width: 0.625rem;
+  height: 0.625rem;
+  background-color: #e57373; /* Muted Warm Coral */
+  border-radius: 50%;
+}
+
+/* 4. Frosted Glassmorphism Tooltip Container */
+.glassmorphic-tooltip {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  background: var(--tooltip-bg, rgba(255, 255, 255, 0.85)) !important;
+  border: 1px solid var(--tooltip-border, rgba(255, 255, 255, 0.2)) !important;
+  border-radius: 1rem !important; /* rounded-2xl */
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.04) !important;
+  padding: 18px !important;
+  font-size: 0.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  transition: all 0.25s ease-out;
+}
+
+

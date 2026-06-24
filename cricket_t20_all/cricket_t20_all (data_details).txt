@@ -1,0 +1,101 @@
+CRICKET T20 DATA — CRICSHEET.ORG
+Thesis: Cricket Player Performance Prediction using ML
+Student: Bilal Haider | Roll: 125-23 | CSS-PU
+Supervisor: Dr. Nadia Saeed
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DOWNLOAD LINKS:
+
+1. PSL (Men)
+   Link: https://cricsheet.org/downloads/psl_male_json.zip
+   Coverage: Feb 2016 — 2026
+   Matches: 357
+
+2. IPL (Men)
+   Link: https://cricsheet.org/downloads/ipl_male_json.zip
+   Coverage: Apr 2008 — 2026
+   Matches: 1,243
+
+3. T20 Internationals (Men)
+   Link: https://cricsheet.org/downloads/t20s_male_json.zip
+   Coverage: Feb 2005 — 2026
+   Matches: 3,382
+
+4. T20 World Cup (Men)
+   Link: https://cricsheet.org/downloads/icc_mens_t20_world_cup_male_json.zip
+   Coverage: 2007 — 2026
+   Matches: 230
+
+5. Big Bash League (Australia)
+   Link: https://cricsheet.org/downloads/bbl_male_json.zip
+   Coverage: Dec 2011 — 2026
+   Matches: 662
+
+6. Caribbean Premier League
+   Link: https://cricsheet.org/downloads/cpl_male_json.zip
+   Coverage: Jul 2013 — 2026
+   Matches: 407
+
+7. Bangladesh Premier League
+   Link: https://cricsheet.org/downloads/bpl_male_json.zip
+   Coverage: Feb 2012 — 2026
+   Matches: 469
+
+8. Lanka Premier League
+   Link: https://cricsheet.org/downloads/lpl_male_json.zip
+   Coverage: Nov 2020 — 2026
+   Matches: 119
+
+9. SA20 (South Africa)
+   Link: https://cricsheet.org/downloads/sat_male_json.zip
+   Coverage: Jan 2023 — 2026
+   Matches: 130
+
+10. The Hundred (England)
+    Link: https://cricsheet.org/downloads/hnd_male_json.zip
+    Coverage: Jul 2021 — 2026
+    Matches: 167
+
+11. T20 Blast (England)
+    Link: https://cricsheet.org/downloads/ntb_male_json.zip
+    Coverage: May 2014 — 2026
+    Matches: 1,506
+
+12. Major League Cricket (USA)
+    Link: https://cricsheet.org/downloads/mlc_male_json.zip
+    Coverage: Jul 2023 — 2026
+    Matches: 75
+
+13. International League T20 (UAE)
+    Link: https://cricsheet.org/downloads/ilt_male_json.zip
+    Coverage: Jan 2023 — 2026
+    Matches: 134
+
+14. Nepal Premier League
+    Link: https://cricsheet.org/downloads/npl_male_json.zip
+    Coverage: Nov 2024 — 2026
+    Matches: 64
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL STATS:
+Total Leagues : 14
+Total Matches : ~8,600+
+Format        : JSON (Ball by ball)
+Source        : cricsheet.org (Free)
+Data Span     : 2005 — 2026 (21 saal!)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOOLS NEEDED:
+Language  : Python
+Libraries : pandas, numpy, scikit-learn,
+            xgboost, tensorflow, shap
+IDE       : Jupyter Notebook (Anaconda)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS:
+1. Sab ZIP files download karo
+2. Folder banao: cricket_t20_data
+3. Jupyter Notebook kholo
+4. Data load + combine karo
+5. EDA (Exploratory Data Analysis) karo
+6. ML Models chalao

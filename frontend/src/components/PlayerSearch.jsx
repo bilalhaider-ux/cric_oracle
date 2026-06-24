@@ -44,7 +44,16 @@ const MATCH_FILTERS = [
   },
 ];
 
-/* â”€â”€ Highlight matching substring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const POPULAR_PLAYERS_FALLBACK = [
+  "Babar Azam", "Virat Kohli", "Suryakumar Yadav", "Mohammad Rizwan", "Jos Buttler",
+  "Travis Head", "Glenn Maxwell", "Shaheen Shah Afridi", "Heinrich Klaasen", "Nicholas Pooran",
+  "Shadab Khan", "Rohit Sharma", "Hardik Pandya", "Jasprit Bumrah", "Rashid Khan",
+  "Mitchell Marsh", "David Warner", "Quinton de Kock", "Phil Salt", "Kane Williamson",
+  "Fakhar Zaman", "Haris Rauf", "Naseem Shah", "Mohammad Amir", "Imad Wasim",
+  "Rinku Singh", "Yashasvi Jaiswal", "Shubman Gill", "Sanju Samson", "Shivam Dube"
+];
+
+/* ──── Highlight matching substring ────────────────────────────────────── */
 function HighlightMatch({ text, query }) {
   if (!query) return <span>{text}</span>;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -77,7 +86,7 @@ export default function PlayerSearch({ onSearch, isLoading }) {
 
   const reduced = useReducedMotion();
 
-  /* â”€â”€ Fetch suggestions (debounced) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Fetch suggestions (debounced) ────────────────────────────────── */
   const fetchSuggestions = useCallback(async (query) => {
     if (!query || query.length < 2) {
       setSuggestions([]);
@@ -93,8 +102,14 @@ export default function PlayerSearch({ onSearch, isLoading }) {
       setShowDropdown(data && data.length > 0);
       setActiveIndex(-1);
     } catch {
-      setSuggestions([]);
-      setShowDropdown(false);
+      console.log('API suggestions offline. Using client-side popular players fallback.');
+      const qLower = query.toLowerCase().trim();
+      const filtered = POPULAR_PLAYERS_FALLBACK.filter(name => 
+        name.toLowerCase().includes(qLower)
+      );
+      setSuggestions(filtered.slice(0, 12));
+      setShowDropdown(filtered.length > 0);
+      setActiveIndex(-1);
     } finally {
       setIsFetching(false);
     }

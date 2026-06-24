@@ -250,42 +250,56 @@ export default function App() {
       setLogs(prev => [...prev, { agent: 'FeatureAgent', text: `Connecting to database engine... Searching player: "${playerName}"` }]);
       await new Promise(r => setTimeout(r, 500));
       
+      // Dynamic Mock Data Hashing Generator
+      const getHash = (str) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash);
+      };
+
       let statsData = null;
       let predictData = null;
+      const cleanName = playerName.trim();
+      const hashVal = getHash(cleanName);
 
       try {
-        const statsRes = await axios.get(`${API_BASE_URL}player-stats?player_name=${playerName}&venue_name=${venue || ''}&match_filter=${matchFilter}`);
+        const statsRes = await axios.get(`${API_BASE_URL}player-stats?player_name=${cleanName}&venue_name=${venue || ''}&match_filter=${matchFilter}`);
         statsData = statsRes.data;
         if (statsData && statsData.player_name) {
           statsData.player = statsData.player_name;
         }
       } catch (err) {
-        console.log('Falling back to mock player stats');
+        console.log('Falling back to dynamic hash-based mock player stats');
+        const TEAMS = ["India", "Pakistan", "Australia", "England", "South Africa", "New Zealand", "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan"];
+        const pTeam = TEAMS[hashVal % TEAMS.length];
+        const pElo = 1550 + (hashVal % 320) + ((hashVal % 10) / 10);
+        const pForm = 68.0 + (hashVal % 25) + ((hashVal % 10) / 10);
+        const pAvg = 28.0 + (hashVal % 20) + ((hashVal % 10) / 10);
+        const pSr = 120.0 + (hashVal % 38) + ((hashVal % 10) / 10);
+        const pVenueSrDiff = -12.0 + (hashVal % 24) + ((hashVal % 10) / 10);
+        
         statsData = {
-          player: playerName.charAt(0).toUpperCase() + playerName.slice(1),
-          team: "National Team",
-          latest_match_date: "2026-06-18",
-          elo_rating: 1720.5,
-          recent_form_score: 76.5,
-          rolling_10_bat_avg: 38.4,
-          rolling_10_bat_sr: 135.2,
-          venue_adjusted_sr: venue ? 4.2 : -1.5,
-          venue_info: venue ? `Adjusted for venue '${venue}' (Baseline SR: 131.0)` : 'Using player default venue SR',
+          player: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+          team: pTeam,
+          latest_match_date: "2026-06-20",
+          elo_rating: pElo,
+          recent_form_score: pForm,
+          rolling_10_bat_avg: pAvg,
+          rolling_10_bat_sr: pSr,
+          venue_adjusted_sr: pVenueSrDiff,
+          venue_info: venue ? `Adjusted for venue '${venue}' (Baseline SR: ${(128.5 + (hashVal % 15)).toFixed(1)})` : 'Using player default venue SR',
           last_10_matches: [
-            { date: "2026-06-18", opponent: "India", runs: 45, balls: 32, strike_rate: 140.6, dismissed: true },
-            { date: "2026-06-14", opponent: "England", runs: 12, balls: 10, strike_rate: 120.0, dismissed: true },
-            { date: "2026-06-10", opponent: "Australia", runs: 68, balls: 41, strike_rate: 165.8, dismissed: false },
-            { date: "2026-06-05", opponent: "West Indies", runs: 5, balls: 6, strike_rate: 83.3, dismissed: true },
-            { date: "2026-05-28", opponent: "South Africa", runs: 82, balls: 55, strike_rate: 149.1, dismissed: false },
-            { date: "2026-05-24", opponent: "New Zealand", runs: 30, balls: 22, strike_rate: 136.4, dismissed: true },
-            { date: "2026-05-20", opponent: "Sri Lanka", runs: 18, balls: 15, strike_rate: 120.0, dismissed: true },
-            { date: "2026-05-15", opponent: "Bangladesh", runs: 52, balls: 35, strike_rate: 148.6, dismissed: false },
-            { date: "2026-05-10", opponent: "Ireland", runs: 41, balls: 28, strike_rate: 146.4, dismissed: true },
-            { date: "2026-05-05", opponent: "Zimbabwe", runs: 25, balls: 20, strike_rate: 125.0, dismissed: true }
+            { date: "2026-06-20", opponent: "Opponent A", runs: Math.max(5, Math.round(pAvg * 1.1)), balls: 24, strike_rate: 135.5, dismissed: true },
+            { date: "2026-06-15", opponent: "Opponent B", runs: Math.max(2, Math.round(pAvg * 0.4)), balls: 12, strike_rate: 110.0, dismissed: true },
+            { date: "2026-06-10", opponent: "Opponent C", runs: Math.max(10, Math.round(pAvg * 1.8)), balls: 32, strike_rate: 160.0, dismissed: false },
+            { date: "2026-06-04", opponent: "Opponent D", runs: Math.max(1, Math.round(pAvg * 0.2)), balls: 8, strike_rate: 90.0, dismissed: true },
+            { date: "2026-05-29", opponent: "Opponent E", runs: Math.max(8, Math.round(pAvg * 1.3)), balls: 26, strike_rate: 142.0, dismissed: false }
           ]
         };
-        
-        if (playerName.toLowerCase().includes('babar')) {
+
+        if (cleanName.toLowerCase().includes('babar')) {
           statsData.player = "Babar Azam";
           statsData.team = "Pakistan";
           statsData.elo_rating = 1813.63;
@@ -320,20 +334,37 @@ export default function App() {
       await new Promise(r => setTimeout(r, 500));
 
       try {
-        const predictRes = await axios.get(`${API_BASE_URL}predict?player_name=${playerName}&match_filter=${matchFilter}`);
+        const predictRes = await axios.get(`${API_BASE_URL}predict?player_name=${cleanName}&match_filter=${matchFilter}`);
         predictData = predictRes.data;
       } catch (err) {
-        console.log('Falling back to mock prediction');
+        console.log('Falling back to dynamic hash-based mock prediction');
+        const mockAvg = statsData.rolling_10_bat_avg;
+        const mockElo = statsData.elo_rating;
+        const mockRuns = Math.round(mockAvg * (1 + (statsData.venue_adjusted_sr / 200)));
+        const finalPred = Math.max(10, Math.min(85, mockRuns));
+        
+        // Random CI width deterministically based on ELO/Form
+        const halfWidth = 8 + (hashVal % 15);
+        const ciL = Math.max(2, finalPred - halfWidth);
+        const ciU = finalPred + halfWidth;
+        const ciW = ciU - ciL;
+
         predictData = {
-          status: "success",
-          predicted_runs: playerName.toLowerCase().includes('babar') ? 48.2 : 36.5,
-          ci_lower: playerName.toLowerCase().includes('babar') ? 31.0 : 20.4,
-          ci_upper: playerName.toLowerCase().includes('babar') ? 65.0 : 54.8,
-          ci_width: playerName.toLowerCase().includes('babar') ? 34.0 : 34.4
+          status: ciW > 40 ? "insufficient_data" : "success",
+          predicted_runs: finalPred,
+          ci_lower: ciL,
+          ci_upper: ciU,
+          ci_width: ciW,
+          message: ciW > 40 ? `insufficient data: Prediction confidence is low (95% CI width is ${ciW.toFixed(2)}, which is greater than 40).` : ""
         };
-        if (playerName.toLowerCase().includes('babar')) {
+
+        if (cleanName.toLowerCase().includes('babar')) {
           predictData.status = "insufficient_data";
-          predictData.message = "insufficient data: Prediction confidence is low (95% CI width is 42.12, which is greater than 40).";
+          predictData.predicted_runs = 48.2;
+          predictData.ci_lower = 31.0;
+          predictData.ci_upper = 72.12;
+          predictData.ci_width = 41.12;
+          predictData.message = "insufficient data: Prediction confidence is low (95% CI width is 41.12, which is greater than 40).";
         }
       }
 

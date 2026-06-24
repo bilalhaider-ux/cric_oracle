@@ -136,10 +136,11 @@ export default function PlayerSearch({ onSearch, isLoading }) {
       setActiveIndex(-1);
     } catch {
       console.log('API suggestions offline. Using client-side popular players fallback.');
-      const qLower = query.toLowerCase().trim();
-      const filtered = POPULAR_PLAYERS_FALLBACK.filter(name => 
-        name.toLowerCase().includes(qLower)
-      );
+      const qNorm = query.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      const filtered = POPULAR_PLAYERS_FALLBACK.filter(name => {
+        const nameNorm = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return nameNorm.includes(qNorm);
+      });
       setSuggestions(filtered.slice(0, 12));
       setShowDropdown(filtered.length > 0);
       setActiveIndex(-1);
@@ -432,9 +433,11 @@ export default function PlayerSearch({ onSearch, isLoading }) {
                 const val = e.target.value;
                 setVenue(val);
                 if (val.trim().length >= 2) {
-                  const filtered = POPULAR_VENUES.filter(v =>
-                    v.toLowerCase().includes(val.toLowerCase().trim())
-                  );
+                  const qNorm = val.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+                  const filtered = POPULAR_VENUES.filter(v => {
+                    const vNorm = v.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return vNorm.includes(qNorm);
+                  });
                   setVenueSuggestions(filtered);
                   setShowVenueDropdown(filtered.length > 0);
                 } else {

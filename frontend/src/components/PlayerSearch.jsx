@@ -53,6 +53,34 @@ const POPULAR_PLAYERS_FALLBACK = [
   "Rinku Singh", "Yashasvi Jaiswal", "Shubman Gill", "Sanju Samson", "Shivam Dube"
 ];
 
+const POPULAR_VENUES = [
+  "Gaddafi Stadium, Lahore",
+  "National Stadium, Karachi",
+  "Rawalpindi Cricket Stadium",
+  "Multan Cricket Stadium",
+  "Melbourne Cricket Ground",
+  "Sydney Cricket Ground",
+  "Adelaide Oval",
+  "Eden Gardens, Kolkata",
+  "Wankhede Stadium, Mumbai",
+  "M.Chinnaswamy Stadium, Bengaluru",
+  "Eden Park, Auckland",
+  "Basin Reserve, Wellington",
+  "Lord's, London",
+  "The Oval, London",
+  "Edgbaston, Birmingham",
+  "Kensington Oval, Barbados",
+  "Sir Vivian Richards Stadium, Antigua",
+  "Sharjah Cricket Stadium",
+  "Dubai International Cricket Stadium",
+  "Sheikh Zayed Stadium, Abu Dhabi",
+  "SuperSport Park, Centurion",
+  "Newlands, Cape Town",
+  "Kingsmead, Durban",
+  "Saurashtra Cricket Association Stadium",
+  "Narendra Modi Stadium, Ahmedabad"
+];
+
 /* ──── Highlight matching substring ────────────────────────────────────── */
 function HighlightMatch({ text, query }) {
   if (!query) return <span>{text}</span>;
@@ -80,7 +108,12 @@ export default function PlayerSearch({ onSearch, isLoading }) {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isFetching, setIsFetching] = useState(false);
 
+  // Venue Autocomplete state
+  const [venueSuggestions, setVenueSuggestions] = useState([]);
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+
   const dropdownRef = useRef(null);
+  const venueDropdownRef = useRef(null);
   const inputRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -154,11 +187,14 @@ export default function PlayerSearch({ onSearch, isLoading }) {
     }
   };
 
-  /* â”€â”€ Close dropdown on outside click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ──── Close dropdown on outside click ────────────────────────────────── */
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
+      }
+      if (venueDropdownRef.current && !venueDropdownRef.current.contains(e.target)) {
+        setShowVenueDropdown(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -373,26 +409,77 @@ export default function PlayerSearch({ onSearch, isLoading }) {
         </div>
 
         {/* Venue input */}
-        <div
-          className={`flex-1 bg-m3Canvas border flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all focus-within:ring-2 focus-within:ring-m3Primary/20 theme-transition ${
-            isVenueFocused ? 'border-m3Primary' : 'border-m3Border'
-          }`}
-        >
-          <MapPin
-            className={`h-4 w-4 flex-shrink-0 transition-colors ${
-              isVenueFocused ? 'text-m3Primary' : 'text-m3TextMuted'
+        <div className="flex-1 relative" ref={venueDropdownRef}>
+          <div
+            className={`bg-m3Canvas border flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all focus-within:ring-2 focus-within:ring-m3Primary/20 theme-transition ${
+              isVenueFocused ? 'border-m3Primary' : 'border-m3Border'
             }`}
-          />
-          <input
-            type="text"
-            value={venue}
-            onFocus={() => setIsVenueFocused(true)}
-            onBlur={() => setIsVenueFocused(false)}
-            onChange={(e) => setVenue(e.target.value)}
-            placeholder="Target Venue (e.g. Lahore) - Optional"
-            className="w-full bg-transparent text-m3Text placeholder-m3TextMuted focus:outline-none text-sm font-sans"
-            disabled={isLoading}
-          />
+          >
+            <MapPin
+              className={`h-4 w-4 flex-shrink-0 transition-colors ${
+                isVenueFocused ? 'text-m3Primary' : 'text-m3TextMuted'
+              }`}
+            />
+            <input
+              type="text"
+              value={venue}
+              onFocus={() => {
+                setIsVenueFocused(true);
+                if (venueSuggestions.length > 0) setShowVenueDropdown(true);
+              }}
+              onBlur={() => setIsVenueFocused(false)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setVenue(val);
+                if (val.trim().length >= 2) {
+                  const filtered = POPULAR_VENUES.filter(v =>
+                    v.toLowerCase().includes(val.toLowerCase().trim())
+                  );
+                  setVenueSuggestions(filtered);
+                  setShowVenueDropdown(filtered.length > 0);
+                } else {
+                  setVenueSuggestions([]);
+                  setShowVenueDropdown(false);
+                }
+              }}
+              placeholder="Target Venue (e.g. Lahore) - Optional"
+              className="w-full bg-transparent text-m3Text placeholder-m3TextMuted focus:outline-none text-sm font-sans"
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* ── Venue Autocomplete Dropdown ────────────────────────────── */}
+          <AnimatePresence>
+            {showVenueDropdown && venueSuggestions.length > 0 && (
+              <motion.ul
+                initial={{ opacity: 0, y: -6, scaleY: 0.95 }}
+                animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                exit={{ opacity: 0, y: -6, scaleY: 0.95 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                className="absolute z-50 left-0 right-0 mt-2 bg-m3Surface border border-m3Border rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] overflow-hidden origin-top backdrop-blur-sm"
+                style={{ maxHeight: '240px', overflowY: 'auto' }}
+              >
+                {venueSuggestions.map((venueName, idx) => (
+                  <motion.li
+                    key={venueName}
+                    initial={reduced ? {} : { opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.025, duration: 0.15 }}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // prevent input blur
+                      synth.playClick();
+                      setVenue(venueName);
+                      setShowVenueDropdown(false);
+                    }}
+                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors duration-100 text-sm font-sans select-none text-m3TextMuted hover:bg-m3Canvas/50 hover:text-m3Text"
+                  >
+                    <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-m3TextMuted" />
+                    <HighlightMatch text={venueName} query={venue} />
+                  </motion.li>
+                ))}
+              </motion.ul>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Submit */}

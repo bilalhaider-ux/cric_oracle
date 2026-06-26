@@ -200,58 +200,116 @@ def _load_player_names() -> list[str]:
 
 def match_player(player_name: str, query: str) -> bool:
     """
-    Performs fuzzy matching to correlate user-input search queries with database player names.
+    Fuzzy match a user search query against a DB player name.
 
-    Why this exists:
-    The raw database source uses terse scorecard identifiers (e.g., "V Kohli" or "SA Yadav"),
-    whereas end-users intuitively search using full common names (e.g., "Virat Kohli" or "Suryakumar Yadav").
+    DB names use scorecard format: "V Kohli", "RG Sharma", "SA Yadav".
+    Users type full names, last names, or popular nicknames.
 
-    Fuzzy Matching Strategy:
-    1. Direct Substring Match: Checks if the search query is directly contained within the candidate database name.
-    2. Popular Nickname Mapping: Matches common full names against a hardcoded lookup dictionary of popular players.
-    3. Last-Name + Initials Matching: Composes initials from the prefix names and matches them against initials from
-       the database entry, supporting cases like "Virat Kohli" (Q initials: 'V', last: 'Kohli') matching "V Kohli".
-
-    Parameters:
-    - player_name (str): The candidate database player name.
-    - query (str): The user search input.
-
-    Returns:
-    - bool: True if the query matches the player name under the fuzzy strategy rules, False otherwise.
+    Matching strategies (applied in order):
+    1. Direct substring — "babar" in "babar azam" ✓
+    2. Popular name map — "virat" → "v kohli", "rohit" → "rg sharma", etc.
+    3. Last-name match — "kohli" matches the last word of "v kohli"
+    4. Initials + last name — "virat kohli" → initials "v", last "kohli" → "v kohli"
     """
     q = query.lower().strip()
     p = player_name.lower().strip()
-    
+
+    if not q:
+        return False
+
+    # 1. Direct substring
     if q in p:
         return True
-        
+
     q_words = q.split()
     p_words = p.split()
-    
+
     if not q_words or not p_words:
         return False
-        
+
+    # 2. Popular name / nickname map
     popular = {
-        "virat kohli": "v kohli", "virat": "v kohli",
+        # India
+        "virat kohli": "v kohli",   "virat": "v kohli",
+        "rohit sharma": "rg sharma", "rohit": "rg sharma",
+        "ms dhoni": "ms dhoni",      "dhoni": "ms dhoni",      "mahi": "ms dhoni",
         "suryakumar yadav": "sa yadav", "suryakumar": "sa yadav", "surya": "sa yadav", "sky": "sa yadav",
-        "rohit sharma": "rg sharma", "ms dhoni": "ms dhoni", "dhoni": "ms dhoni",
-        "glenn maxwell": "gj maxwell", "maxwell": "gj maxwell",
-        "babar azam": "babar azam", "babar": "babar azam",
+        "hardik pandya": "h pandya", "hardik": "h pandya",
+        "jasprit bumrah": "jj bumrah", "bumrah": "jj bumrah",
+        "shubman gill": "s gill",    "shubman": "s gill",
+        "rishabh pant": "rr pant",   "pant": "rr pant",
+        "ks bharat": "ks bharat",
+        "yashasvi jaiswal": "y jaiswal", "jaiswal": "y jaiswal",
+        # Pakistan
+        "babar azam": "babar azam",  "babar": "babar azam",
         "mohammad rizwan": "mohammad rizwan", "rizwan": "mohammad rizwan",
         "shaheen afridi": "shaheen shah afridi", "shaheen": "shaheen shah afridi",
+        "shadab khan": "shadab khan", "shadab": "shadab khan",
+        "fakhar zaman": "fakhar zaman", "fakhar": "fakhar zaman",
+        "imam ul haq": "imam-ul-haq", "imam": "imam-ul-haq",
+        # Australia
+        "glenn maxwell": "gj maxwell", "maxwell": "gj maxwell",
+        "david warner": "da warner",   "warner": "da warner",
+        "pat cummins": "pj cummins",   "cummins": "pj cummins",
+        "steve smith": "spm smith",    "steven smith": "spm smith",
+        "travis head": "tm head",      "head": "tm head",
+        "mitchell starc": "ma starc",  "starc": "ma starc",
+        "marcus stoinis": "mp stoinis","stoinis": "mp stoinis",
+        # England
+        "jos buttler": "jc buttler",   "buttler": "jc buttler",
+        "ben stokes": "ben stokes",    "stokes": "ben stokes",
+        "liam livingstone": "ls livingstone", "livingstone": "ls livingstone",
+        "jason roy": "jj roy",         "roy": "jj roy",
+        "alex hales": "ad hales",      "hales": "ad hales",
+        "mark wood": "ma wood",
+        # West Indies
+        "kieron pollard": "ka pollard","pollard": "ka pollard",
+        "sunil narine": "sp narine",   "narine": "sp narine",
+        "andre russell": "ad russell", "russell": "ad russell",
+        "dj bravo": "dj bravo",        "bravo": "dj bravo",
+        "nicholas pooran": "n pooran", "pooran": "n pooran",
+        "shimron hetmyer": "so hetmyer","hetmyer": "so hetmyer",
+        "evin lewis": "e lewis",
+        # South Africa
+        "david miller": "da miller",   "miller": "da miller",
+        "quinton de kock": "q de kock","de kock": "q de kock",
+        "faf du plessis": "f du plessis","faf": "f du plessis",
+        "rassie van der dussen": "hd van der dussen","rassie": "hd van der dussen",
+        "aiden markram": "ag markram", "markram": "ag markram",
+        "kagiso rabada": "k rabada",   "rabada": "k rabada",
+        # New Zealand
+        "kane williamson": "kane williamson","kane": "kane williamson",
+        "martin guptill": "mj guptill","guptill": "mj guptill",
+        "devon conway": "dp conway",   "conway": "dp conway",
+        "trent boult": "ta boult",     "boult": "ta boult",
+        # Sri Lanka
+        "kusal mendis": "bkg mendis",  "mendis": "bkg mendis",
+        "dasun shanaka": "md shanaka", "shanaka": "md shanaka",
+        "wanindu hasaranga": "pwd hasaranga","hasaranga": "pwd hasaranga",
+        # Bangladesh
+        "shakib al hasan": "shakib al hasan","shakib": "shakib al hasan",
+        "mushfiqur rahim": "mushfiqur rahim","mushfiqur": "mushfiqur rahim",
+        "litton das": "litton kumar das","litton": "litton kumar das",
+        # Afghanistan
+        "rashid khan": "rashid khan",  "rashid": "rashid khan",
+        "mohammad nabi": "mohammad nabi","nabi": "mohammad nabi",
+        "hazratullah zazai": "hazratullah zazai","zazai": "hazratullah zazai",
     }
-    
+
     if q in popular and popular[q] == p:
         return True
- 
-    if len(q_words) > 1 and len(p_words) > 1:
-        if q_words[-1] == p_words[-1]:
-            p_lead = p_words[:-1]
-            q_lead = q_words[:-1]
-            p_initials = "".join([w[0] for w in p_lead if w])
-            q_initials = "".join([w[0] for w in q_lead if w])
-            if p_initials.startswith(q_initials) or q_initials.startswith(p_initials):
-                return True
+
+    # 3. Single-word query: match against any word in the DB name (covers last names)
+    if len(q_words) == 1:
+        return any(q_words[0] in word for word in p_words)
+
+    # 4. Multi-word: last word must match, then check initials of preceding words
+    if q_words[-1] == p_words[-1]:
+        p_initials = "".join(w[0] for w in p_words[:-1] if w)
+        q_initials = "".join(w[0] for w in q_words[:-1] if w)
+        if p_initials.startswith(q_initials) or q_initials.startswith(p_initials):
+            return True
+
     return False
 
 @app.get("/api/players")

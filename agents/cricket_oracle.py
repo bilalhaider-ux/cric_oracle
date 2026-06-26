@@ -335,13 +335,21 @@ def predict_runs(
             latest_row["elo_rating"],
         ]])
 
-    # Train model
+    # Train model — more capacity than the default to capture per-player patterns
     model = xgb.XGBRegressor(
-        n_estimators=50, max_depth=3, learning_rate=0.1, random_state=42
+        n_estimators=100, max_depth=4, learning_rate=0.08, random_state=42
     )
     model.fit(X, y)
-    raw_prediction = float(model.predict(latest_features)[0])
-    point_prediction = verify_agent_output_safety(raw_prediction)
+    xgb_pred = float(model.predict(latest_features)[0])
+
+    # Anchor prediction to the player's recent rolling average.
+    # XGBoost alone regresses toward the dataset mean (~30 runs) because T20
+    # is high-variance. Blending 50/50 with rolling_10_bat_avg ensures the
+    # prediction stays player-specific (Babar at 84 rolling avg → ~60 pred,
+    # not the same as a tail-ender at 12 rolling avg → ~20 pred).
+    rolling_avg = float(latest_features[0][0])
+    blended_pred = 0.5 * xgb_pred + 0.5 * rolling_avg
+    point_prediction = verify_agent_output_safety(blended_pred)
 
     # Bootstrapping (100 samples for 95% CI)
     bootstrap_predictions = []
@@ -349,23 +357,28 @@ def predict_runs(
     n_samples = len(player_df)
 
     for i in range(100):
-        indices   = np.random.choice(n_samples, size=n_samples, replace=True)
-        X_boot    = X[indices]
-        y_boot    = y[indices]
+        indices    = np.random.choice(n_samples, size=n_samples, replace=True)
+        X_boot     = X[indices]
+        y_boot     = y[indices]
         boot_model = xgb.XGBRegressor(
-            n_estimators=30, max_depth=3, learning_rate=0.1, random_state=i
+            n_estimators=50, max_depth=4, learning_rate=0.08, random_state=i
         )
         boot_model.fit(X_boot, y_boot)
-        bootstrap_predictions.append(boot_model.predict(latest_features)[0])
+        # Apply the same rolling-avg blend to each bootstrap prediction
+        boot_xgb  = float(boot_model.predict(latest_features)[0])
+        bootstrap_predictions.append(0.5 * boot_xgb + 0.5 * rolling_avg)
 
     ci_lower = float(np.percentile(bootstrap_predictions, 2.5))
     ci_upper = float(np.percentile(bootstrap_predictions, 97.5))
     ci_width = ci_upper - ci_lower
 
-    if ci_width > 40:
+    # T20 cricket is inherently high-variance; a CI threshold of 40 was too
+    # strict and flagged too many valid players as insufficient_data.
+    if ci_width > 60:
         msg = (
-            f"insufficient data: Prediction confidence is low (95% CI width is "
-            f"{ci_width:.2f}, which is greater than 40)."
+            f"insufficient data: Prediction confidence is too low (95% CI width "
+            f"{ci_width:.1f} runs). This player's scoring is too volatile or their "
+            f"history too sparse for a reliable estimate."
         )
         if tool_context:
             tool_context.state["predicted_runs"] = "insufficient data"

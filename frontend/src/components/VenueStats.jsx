@@ -1,50 +1,62 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Map, Calendar, Target, Zap } from 'lucide-react';
 import { synth } from '../hooks/audioSynth';
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:8001/api/' : '');
 
 const FEATURED_VENUES = [
-  {
-    name: 'Gaddafi Stadium',
-    city: 'Lahore',
-    country: '🇵🇰 Pakistan',
-    query: 'Lahore',
-    description: 'High-scoring flat pitch. Pacers dominate early.',
-    capacity: '27,000',
-  },
-  {
-    name: 'Melbourne Cricket Ground',
-    city: 'Melbourne',
-    country: '🇦🇺 Australia',
-    query: 'Melbourne',
-    description: 'Seamer-friendly, large outfield. Low scoring.',
-    capacity: '100,024',
-  },
-  {
-    name: 'Eden Park',
-    city: 'Auckland',
-    country: '🇳🇿 New Zealand',
-    query: 'Eden Park',
-    description: 'Small boundaries. Batters paradise in NZ.',
-    capacity: '48,000',
-  },
+  { name: 'Gaddafi Stadium',                  country: '🇵🇰', query: 'Lahore',        description: 'High-scoring flat pitch. Pacers dominate early.' },
+  { name: 'Eden Gardens',                      country: '🇮🇳', query: 'Eden Gardens',  description: 'Spin-friendly surface. Massive home crowd effect.' },
+  { name: 'Wankhede Stadium',                  country: '🇮🇳', query: 'Wankhede',      description: 'Small ground, high-scoring. Dew factor at night.' },
+  { name: 'Melbourne Cricket Ground',          country: '🇦🇺', query: 'Melbourne Cricket Ground', description: 'Largest ground. Seam movement, big outfield.' },
+  { name: 'Dubai International Cricket Stadium', country: '🇦🇪', query: 'Dubai International', description: 'Neutral venue. Spin-dominant, low first-innings totals.' },
+  { name: 'Shere Bangla National Stadium',     country: '🇧🇩', query: 'Shere Bangla',  description: 'Most T20 matches in the dataset. Slow, turning pitch.' },
 ];
 
 export default function VenueStats({ stats, onSearch, isLoading, onClear }) {
-  const [query, setQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
+  const [query, setQuery]           = useState('');
+  const [isFocused, setIsFocused]   = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSugg, setShowSugg]     = useState(false);
+  const debounceRef = useRef(null);
+
+  // Fetch venue autocomplete suggestions
+  useEffect(() => {
+    if (!query.trim() || query.length < 2) { setSuggestions([]); setShowSugg(false); return; }
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}venues?q=${encodeURIComponent(query)}&limit=6`);
+        setSuggestions(res.data || []);
+        setShowSugg(true);
+      } catch { setSuggestions([]); }
+    }, 200);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setShowSugg(false);
     if (query.trim()) {
       synth.playRun();
       onSearch(query.trim());
     }
   };
 
+  const handleSuggClick = (name) => {
+    synth.playClick();
+    setQuery(name);
+    setShowSugg(false);
+    onSearch(name);
+  };
+
   const handleFeaturedClick = (venue) => {
     synth.playClick();
     setQuery(venue.query);
+    setShowSugg(false);
     onSearch(venue.query);
   };
 
@@ -64,18 +76,45 @@ export default function VenueStats({ stats, onSearch, isLoading, onClear }) {
         <div className="p-6">
           {/* Search form */}
           <form onSubmit={handleSubmit} className="flex gap-3 mb-6">
-            <div className={`flex-1 bg-m3Canvas border flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all focus-within:ring-2 focus-within:ring-m3Primary/30 ${isFocused ? 'border-m3Primary' : 'border-transparent'}`}>
-              <Search className={`h-4 w-4 flex-shrink-0 ${isFocused ? 'text-m3Primary' : 'text-m3TextMuted'}`} />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="Search any stadium (e.g. Melbourne, Eden Park, Lord's)..."
-                className="bg-transparent text-m3Text placeholder-m3TextMuted focus:outline-none w-full text-sm font-sans"
-                required
-              />
+            <div className="flex-1 relative">
+              <div className={`bg-m3Canvas border flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all focus-within:ring-2 focus-within:ring-m3Primary/30 ${isFocused ? 'border-m3Primary' : 'border-transparent'}`}>
+                <Search className={`h-4 w-4 flex-shrink-0 ${isFocused ? 'text-m3Primary' : 'text-m3TextMuted'}`} />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setTimeout(() => setShowSugg(false), 150)}
+                  placeholder="Search any stadium (e.g. Wankhede, Dubai, Eden Gardens)..."
+                  className="bg-transparent text-m3Text placeholder-m3TextMuted focus:outline-none w-full text-sm font-sans"
+                  required
+                />
+              </div>
+              {/* Autocomplete dropdown */}
+              <AnimatePresence>
+                {showSugg && suggestions.length > 0 && (
+                  <motion.ul
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute left-0 right-0 top-full mt-1 bg-m3Surface border border-m3Border rounded-xl shadow-lg z-50 overflow-hidden"
+                  >
+                    {suggestions.map((name) => (
+                      <li key={name}>
+                        <button
+                          type="button"
+                          onMouseDown={() => handleSuggClick(name)}
+                          className="w-full text-left px-4 py-2.5 text-sm font-sans text-m3Text hover:bg-m3Canvas transition-colors duration-100 flex items-center gap-2"
+                        >
+                          <Map className="h-3.5 w-3.5 text-m3TextMuted flex-shrink-0" />
+                          {name}
+                        </button>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
             </div>
             <button
               type="submit"

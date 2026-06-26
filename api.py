@@ -181,6 +181,44 @@ def api_venue_stats(venue_name: str):
         raise HTTPException(status_code=404, detail=res["error"])
     return res
 
+
+# In-memory cache for venue names used by the search autocomplete.
+_VENUE_NAMES_CACHE: list[str] | None = None
+
+def _load_venue_names() -> list[str]:
+    """Load all distinct venue names from the DB, sorted by match count (most-played first)."""
+    global _VENUE_NAMES_CACHE
+    if _VENUE_NAMES_CACHE is None:
+        try:
+            from database import get_db_connection
+            conn = get_db_connection()
+            rows = conn.execute(
+                """SELECT venue FROM cricket_features
+                   GROUP BY venue ORDER BY COUNT(*) DESC"""
+            ).fetchall()
+            _VENUE_NAMES_CACHE = [row[0] for row in rows if row[0]]
+            conn.close()
+        except Exception:
+            _VENUE_NAMES_CACHE = []
+    return _VENUE_NAMES_CACHE
+
+
+@app.get("/api/venues")
+def api_venues(
+    q: str = Query(default="", description="Venue search query"),
+    limit: int = Query(default=10, ge=1, le=50),
+):
+    """
+    Autocomplete endpoint for venue names.
+    Returns venues whose name contains the query string (case-insensitive),
+    ranked by total match count so the most prominent grounds appear first.
+    """
+    names = _load_venue_names()
+    if q:
+        ql = q.lower()
+        names = [n for n in names if ql in n.lower()]
+    return names[:limit]
+
 # In-memory cache for the player name list used by the search autocomplete.
 # Populated on first request, avoids hitting SQLite on every keystroke.
 _PLAYER_NAMES_CACHE: list[str] | None = None

@@ -3,8 +3,6 @@
 **A production-grade, multi-agent AI statistical reasoning system built on the Google Agent Development Kit (ADK), powered by Gemini 2.5 Flash, served through a custom Model Context Protocol (MCP) runtime, with zero data leakage by construction.**
 
 > **Capstone Track:** Freestyle (Built for the Kaggle × Google 5-Day AI Agents Intensive Capstone)
-> **Project URL:** [https://github.com/bilal/cric_oracle](https://github.com/bilal/cric_oracle) (Public Repository)
-> **Demonstration Video:** [Youtube Video Link Placeholder]
 
 ---
 
@@ -19,7 +17,7 @@ In professional T20 cricket, predicting a batsman's runs in an upcoming match is
 ### The Core Value
 * **Per-Player Model Fitting:** Models learn unique career signals, separating elite run-scorers from lower-order batsmen.
 * **Bootstrapped Honesty:** Generates a **95% bootstrapped confidence interval** using 100 resamples to output reliable uncertainty bounds.
-* **Low-Confidence Guardrail:** If the confidence interval width exceeds 40 runs, the system activates a guardrail, explicitly returning `insufficient_data` instead of guessing, protecting downstream decisions from high-uncertainty environments.
+* **Low-Confidence Guardrail:** If the confidence interval width exceeds 60 runs, the system activates a guardrail, explicitly returning `insufficient_data` instead of guessing, protecting downstream decisions from high-uncertainty environments.
 * **Zero-Leakage Feature Pipeline:** Computes ELO ratings, recent form, and venue strike rates strictly chronologically using *pre-match-only* data (strict chronological backtesting).
 
 ---
@@ -74,12 +72,13 @@ The codebase applies the core concepts taught in Kaggle's 5-Day Intensive course
 ### Model Training Details:
 When predicting performance:
 1. **Feature Matrix:** The training matrix uses: `rolling_10_bat_avg`, `rolling_10_bat_sr`, `recent_form_score`, `venue_adjusted_sr`, and `elo_rating`.
-2. **Regressor Configuration:** `XGBoostRegressor(n_estimators=50, max_depth=3, learning_rate=0.1)`.
-3. **Bootstrap Resampling:** 100 random resamples with replacement compute the 95% CI (2.5th and 97.5th percentiles).
+2. **Regressor Configuration:** `XGBoostRegressor(n_estimators=100, max_depth=4, learning_rate=0.08)`.
+3. **Rolling-Average Anchor:** The XGBoost point prediction is blended 50/50 with the player's `rolling_10_bat_avg`. This anchors predictions to individual career trajectory, preventing regression toward the dataset mean (~30 runs) common in high-variance T20 data.
+4. **Bootstrap Resampling:** 100 random resamples with replacement compute the 95% CI (2.5th and 97.5th percentiles). The same rolling-average blend is applied to each bootstrap prediction for CI consistency.
 
 ### Statistical Guardrail Activation:
 $$\text{CI Width} = \text{Upper CI} - \text{Lower CI}$$
-If the interval width is greater than 40 runs, Cricket Oracle triggers a safety shutdown. The `PredictorAgent` refuses to output a point prediction, setting status to `insufficient_data` and instructing the narrator to explain the high-uncertainty factors to the user.
+If the interval width exceeds 60 runs, Cricket Oracle triggers a safety shutdown. The `PredictorAgent` refuses to output a point prediction, setting status to `insufficient_data` and instructing the narrator to explain the high-uncertainty factors to the user. The 60-run threshold is calibrated to T20 cricket's inherent variance — a threshold of 40 was too aggressive and flagged statistically valid players as uncertain.
 
 ---
 

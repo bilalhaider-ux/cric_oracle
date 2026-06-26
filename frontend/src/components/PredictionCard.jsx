@@ -15,25 +15,23 @@ export default function PredictionCard({ prediction, onViewWeights }) {
     ci_upper,
     ci_width,
     message,
+    agent_fallback,
+    match_filter,
+    training_rows,
   } = prediction;
 
-  const isLowConfidence = status === 'insufficient_data' || ci_width > 40;
+  // Match backend threshold: CI width > 60 triggers guardrail
+  const isLowConfidence = status === 'insufficient_data' || ci_width > 60;
   const confidenceLabel = isLowConfidence
     ? 'Insufficient Data'
     : ci_width < 25
     ? 'High Confidence'
     : 'Medium Confidence';
 
-  // [LAYOUT LIFECYCLE TRACKING HOOK - COUNT-UP ANIMATION TRIGGER]
-  // Custom hook that registers layout lifecycle updates to animate numeric metrics incrementally 
-  // on component mount or data payload updates, ensuring high visual engagement.
   const animatedRuns  = useCountUp(!isLowConfidence ? predicted_runs : null, { duration: 800, decimals: 0 });
   const animatedLower = useCountUp(!isLowConfidence ? ci_lower       : null, { duration: 800, decimals: 0 });
   const animatedUpper = useCountUp(!isLowConfidence ? ci_upper       : null, { duration: 800, decimals: 0 });
 
-  // [FRAMER-MOTION RESPONSIVE ANIMATION STATE]
-  // Configures the card entrance transition state. Bypasses translation offsets if accessibility 
-  // reduced-motion mode is active, avoiding motion sickness while presenting a sleek ease-out fade.
   const entrance = reduced
     ? {}
     : {
@@ -43,9 +41,6 @@ export default function PredictionCard({ prediction, onViewWeights }) {
       };
 
   return (
-    /* [MATERIAL 3 UI COMPONENT PARADIGM - ELEVATED CONTAINER / CARD]
-       Adheres to the M3 specification for elevated surfaces, utilizing rounded corners (rounded-2xl) 
-       and sub-pixel borders for dark/light mode compatibility. */
     <motion.div
       className="bg-m3Surface rounded-2xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] border border-m3Border theme-transition"
       {...entrance}
@@ -78,10 +73,10 @@ export default function PredictionCard({ prediction, onViewWeights }) {
                 <h4 className="text-sm font-sans font-semibold text-m3Text">Statistical Guardrail Active</h4>
               </div>
               <p className="text-[11px] font-sans text-m3TextMuted leading-relaxed">
-                {message || 'The predictor model requires more historical matches for this player/venue combination to make a confident prediction (Confidence Interval width exceeds the limit of 40 runs).'}
+                {message || 'Not enough historical matches to generate a reliable prediction. The 95% confidence interval is too wide (> 60 runs) for this player.'}
               </p>
               <span className="text-[10px] font-sans font-semibold text-signal bg-signalSoft/40 rounded-full px-3 py-1 w-fit">
-                Model Status: Suspended
+                Guardrail: Insufficient Data
               </span>
             </motion.div>
           ) : (
@@ -154,6 +149,21 @@ export default function PredictionCard({ prediction, onViewWeights }) {
           )}
         </div>
 
+        {/* Agent fallback notice — shown when predictor auto-widened the match filter */}
+        {agent_fallback && (
+          <motion.div
+            className="w-full mt-2 px-4 py-2.5 bg-m3Indicator/30 border border-m3Primary/20 rounded-xl flex items-start gap-2"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.2 }}
+          >
+            <Activity className="h-3.5 w-3.5 text-m3Primary flex-shrink-0 mt-0.5" />
+            <p className="text-[10px] font-sans text-m3Primary leading-relaxed">
+              <span className="font-bold">Agent decision:</span> {agent_fallback}
+            </p>
+          </motion.div>
+        )}
+
         {/* Right: diagnostic panel */}
         <motion.div
           className="bg-m3Canvas/50 p-5 rounded-2xl flex flex-col justify-center min-w-[220px] border border-m3Border theme-transition"
@@ -170,6 +180,10 @@ export default function PredictionCard({ prediction, onViewWeights }) {
             {[
               { label: 'Iterations',    value: '100 Bootstraps'  },
               { label: 'ML Estimator', value: 'XGBoost Regressor' },
+              {
+                label: 'Training Rows',
+                value: training_rows ? `${training_rows} matches` : '—',
+              },
               {
                 label: 'Error Margin',
                 value: isLowConfidence || typeof ci_width !== 'number'

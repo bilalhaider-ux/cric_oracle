@@ -37,26 +37,21 @@ export default function AgentTrace({ activeStep, logs = [], finalInsight }) {
   const [logsExpanded, setLogsExpanded] = useState(false);
   const logContainerRef = useRef(null);
 
-  // [LAYOUT LIFECYCLE TRACKING HOOK - AUDIO SYNCHRONIZATION]
-  // Triggers tick audio effect on change to match chronological log additions.
+  // Play tick sound when a new log line arrives
   useEffect(() => {
     if (logs.length > 0) {
       synth.playTick();
     }
   }, [logs.length]);
 
-  // [LAYOUT LIFECYCLE TRACKING HOOK - SUCCESS FEEDBACK STATE]
-  // Plays final audio alert only when step transitions to completion.
+  // Play done sound when all pipeline steps complete
   useEffect(() => {
     if (activeStep === 5) {
       synth.playDone();
     }
   }, [activeStep]);
 
-  // [TYPEWRITER SIMULATION STREAMING CONSTRAINT BOUNDARY]
-  // Throttles and streams the multi-agent final text insight character-by-character.
-  // Utilizes clean state resetting boundaries to clear previous outputs when a new query commences,
-  // preventing out-of-order execution, race conditions, or text overlaps.
+  // Typewriter effect for the final narrator output
   useEffect(() => {
     if (!finalInsight) {
       setTypedInsight('');
@@ -87,8 +82,7 @@ export default function AgentTrace({ activeStep, logs = [], finalInsight }) {
     };
   }, [finalInsight]);
 
-  // [LAYOUT LIFECYCLE TRACKING HOOK - SCROLL BOUNDARY ANCHOR]
-  // Auto-scrolls the terminal logs panel to the bottom when new console lines are appended.
+  // Auto-scroll log panel to bottom on new entries
   useEffect(() => {
     if (logContainerRef.current) {
       const container = logContainerRef.current;
@@ -129,7 +123,7 @@ export default function AgentTrace({ activeStep, logs = [], finalInsight }) {
         <div className="flex items-center gap-2 pb-4 mb-4 border-b border-m3Border">
           <Cpu className="h-4.5 w-4.5 text-m3Primary flex-shrink-0" />
           <h3 className="text-xs font-sans font-bold uppercase tracking-[0.1em] text-m3Text">
-            Multi-Agent Cognitive Workflow
+            ADK Agent Pipeline
           </h3>
         </div>
 

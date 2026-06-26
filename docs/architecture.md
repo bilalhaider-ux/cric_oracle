@@ -1,58 +1,45 @@
-# Cognitive Multi-Agent Architecture
+# Multi-Agent Architecture
 
-CricketOracle deploys an orchestration pipeline built on the **Google Agent Development Kit (ADK)** and coordinates four specialized agent nodes.
+CricketOracle uses a sequential pipeline built on the **Google Agent Development Kit (ADK)** with four specialized agents.
 
 ---
 
-## Architecture Flow Schema
+## Pipeline (Sequential, not parallel)
 
 ```mermaid
 graph LR
-    subgraph Input
-        A[Prompt Input Block]
-    end
-
-    subgraph Orchestration
-        B[PlannerAgent]
-    end
-
-    subgraph Concurrent Execution
-        C[FeatureAgent]
-        D[PredictorAgent]
-    end
-
-    subgraph Convergence
-        E[NarratorAgent]
-    end
-
-    A --> B
-    B --> C
-    B --> D
-    C --> E
-    D --> E
+    A[User Query] --> B[PlannerAgent\nSequentialAgent]
+    B --> C[FeatureAgent]
+    C --> D[PredictorAgent]
+    D --> E[NarratorAgent]
 ```
 
----
-
-## Agent Registry & Roles
-
-### 1. PlannerAgent (Indigo)
-*   **Orchestration**: Manages downstream handoffs, resolves input parameters, and establishes session logs.
-
-### 2. FeatureAgent (Sage Green)
-*   **Data Extraction**: Queries historical player records, updates career Elo values, recent averages, and venue adjustment ratios.
-
-### 3. PredictorAgent (Coral)
-*   **Prediction Estimation**: Trains a temporary XGBoost model on the filtered subset of historical matches. Generates a point forecast and bootstrap-samples a 95% confidence interval width.
-
-### 4. NarratorAgent (Gold)
-*   **Analyst Commentary**: Compiles the quantitative predictions into natural, contextual analyst commentary.
+State is shared between agents via `ToolContext.state`. PlannerAgent is the `SequentialAgent` wrapper — it has no tools of its own.
 
 ---
 
-## Model Calibration Weights
+## Agent Roles
 
-*   **Recent Form (Rolling 5-Inn Average)**: `45%`
-*   **Venue History (Pitch Index)**: `30%`
-*   **Bowling Matchup Index**: `15%`
-*   **Player Age/Condition**: `10%`
+### 1. PlannerAgent
+*   `SequentialAgent` that sequences FeatureAgent → PredictorAgent → NarratorAgent. No tools, no LLM call — pure orchestration.
+
+### 2. FeatureAgent
+*   Calls `load_player_data` MCP tool to fetch rolling averages, ELO, recent form, and venue strike rate from SQLite. Stores results in `ToolContext.state`.
+
+### 3. PredictorAgent
+*   Calls `predict_runs` MCP tool. Trains XGBoost on player's career history, blends prediction 50/50 with `rolling_10_bat_avg`, runs 100 bootstrap resamples for 95% CI. If CI > 60 runs and match_filter is not "all", autonomously retries with all match types.
+
+### 4. NarratorAgent
+*   Reads from `ToolContext.state` (predicted_runs, ci_lower, ci_upper, elo_rating, recent_form_score) and writes a 3-sentence broadcast-style analysis using Gemini 2.5 Flash.
+
+---
+
+## XGBoost Feature Importance (from `feature_importances_`)
+
+| Feature | Importance |
+|---------|-----------|
+| `rolling_10_bat_avg` | 38% |
+| `recent_form_score` | 28% |
+| `elo_rating` | 18% |
+| `venue_adjusted_sr` | 10% |
+| `rolling_10_bat_sr` | 6% |

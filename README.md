@@ -26,7 +26,7 @@ The result is a system where asking about Babar Azam and asking about a fringe d
 
 ---
 
-## 2. Core Evaluation Matrix Alignment
+## 2. Evaluation Criteria Alignment
 
 | Course Concept | Implementation | Primary File(s) |
 |---|---|---|

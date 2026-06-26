@@ -275,9 +275,7 @@ export default function PlayerSearch({ onSearch, isLoading }) {
           Match Type Filter
         </p>
 
-        {/* [MATERIAL 3 UI COMPONENT PARADIGM - SEGMENTED CONTROL / CHIPS]
-            Implements standard Material 3 segmented pill design. It uses absolute positioning 
-            with layoutId matching for smooth sliding active indicator transitions. */}
+        {/* Segmented pill filter — active indicator slides via Framer Motion layoutId */}
         <div className="relative flex p-1 bg-m3Canvas rounded-full border border-m3Border w-fit gap-1 select-none theme-transition">
           {MATCH_FILTERS.map((f) => {
             const Icon = f.icon;

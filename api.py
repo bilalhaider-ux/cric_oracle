@@ -110,9 +110,26 @@ def api_predict(
         )
 
     # Step 1: Run statistical prediction first so we have concrete numbers.
+    # If the player is not found, the agent autonomously searches for close
+    # name matches and returns suggestions rather than a bare 404 — this
+    # prevents dead-ends and keeps the experience useful.
     pred_res = predict_runs(player_name, match_filter=match_filter)
     if pred_res.get("status") == "error":
-        raise HTTPException(status_code=404, detail=pred_res.get("message"))
+        # Agent fallback: find similar player names and surface them
+        all_names = _load_player_names()
+        q = player_name.lower().strip()
+        suggestions = [n for n in all_names if match_player(n, q)][:5]
+        if not suggestions:
+            # Broader fuzzy: any word overlap
+            q_words = set(q.split())
+            suggestions = [
+                n for n in all_names
+                if any(w in n.lower() for w in q_words if len(w) > 2)
+            ][:5]
+        detail = pred_res.get("message", "Player not found.")
+        if suggestions:
+            detail += f" Did you mean: {', '.join(suggestions)}?"
+        raise HTTPException(status_code=404, detail=detail)
 
     # Step 2: Build an oracle query that includes the actual prediction numbers so
     # the NarratorAgent's commentary matches what the UI displays.
@@ -137,15 +154,16 @@ def api_predict(
         insight = f"Narrative generation failed: {e}"
 
     return {
-        "status":         pred_res.get("status"),
-        "predicted_runs": pred_res.get("predicted_runs", 0.0),
-        "ci_lower":       pred_res.get("ci_lower", 0.0),
-        "ci_upper":       pred_res.get("ci_upper", 0.0),
-        "ci_width":       pred_res.get("ci_width", 0.0),
-        "insight":        insight,
-        "message":        pred_res.get("message", ""),
-        "match_filter":   match_filter,
-        "training_rows":  pred_res.get("training_rows", 0),
+        "status":          pred_res.get("status"),
+        "predicted_runs":  pred_res.get("predicted_runs", 0.0),
+        "ci_lower":        pred_res.get("ci_lower", 0.0),
+        "ci_upper":        pred_res.get("ci_upper", 0.0),
+        "ci_width":        pred_res.get("ci_width", 0.0),
+        "insight":         insight,
+        "message":         pred_res.get("message", ""),
+        "match_filter":    pred_res.get("match_filter", match_filter),
+        "training_rows":   pred_res.get("training_rows", 0),
+        "agent_fallback":  pred_res.get("agent_fallback"),
     }
 
 @app.get("/api/top-players")

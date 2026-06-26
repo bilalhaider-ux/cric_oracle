@@ -1,24 +1,24 @@
 # CricketOracle
 
-> **An Elite, Highly-Immersive T20 Cricket Performance Predictor & Cognitive Multi-Agent Architecture.**
+> **T20 Cricket Performance Predictor — Multi-Agent System built on Google ADK.**
 
-Welcome to the official developer documentation portal for **CricketOracle**. 
+Welcome to the developer documentation for **CricketOracle**. 
 
-CricketOracle transitions sports analytics from a basic stats repository into a premium, interactive AI agent platform. By combining a multi-agent framework, an on-the-fly machine learning regression engine, and standard security boundaries, it delivers broadcast-grade predictive insights.
+CricketOracle uses a sequential multi-agent pipeline to deliver per-player XGBoost predictions with bootstrapped confidence intervals, served through a FastMCP data layer and a React frontend.
 
 ---
 
 ## Key Features
 
-*   **Multi-Agent Cognitive Handoff**: Driven by Google Agent Development Kit (ADK), executing sequential orchestration (Planner $\rightarrow$ Feature $\rightarrow$ Predictor $\rightarrow$ Narrator).
-*   **On-the-Fly XGBoost Regression**: Auto-calibrates to T20 leagues or bilateral internationals dynamically.
-*   **Secure Sandbox Protocol**: Sandbox execution checks and safety clamping limits `[0.0, 175.0]` to guarantee statistical integrity.
-*   **Premium Material 3 UI**: Clean glassmorphic developer console featuring dual light/dark space palettes, micro-animations, and real-time agent tracing logs.
+*   **4-Agent ADK Pipeline**: PlannerAgent (SequentialAgent) → FeatureAgent → PredictorAgent → NarratorAgent, sharing state via `ToolContext.state`.
+*   **Per-Player XGBoost**: Trains a fresh model on each player's career history, blended 50/50 with their rolling average to prevent dataset-mean regression.
+*   **Statistical Guardrail**: CI width > 60 runs triggers autonomous retry (widens match filter) or returns `insufficient_data` if retry also fails.
+*   **FastMCP Data Layer**: 4 typed tools expose the 197,620-row SQLite database to agents without raw SQL.
 
 ---
 
 ## Document Navigation
 
 *   [**Setup Guide**](setup.md) — Get the backend FastAPI server and React client up and running locally.
-*   [**Cognitive Architecture**](architecture.md) — Inspect the agent connections, execution pipeline, and feature weighting heatmap.
-*   [**API Reference**](api.md) — Review backend routes, parameters, and MCP tool call bindings.
+*   [**Architecture**](architecture.md) — Agent connections, execution pipeline, and feature importance.
+*   [**API Reference**](api.md) — Backend routes, parameters, and MCP tool bindings.

@@ -180,14 +180,10 @@ def process_player_group(args):
     """
     Computes all career-level features for a single player.
 
-    [CRITICAL ANTI-CORRUPTION LAYER - TIMELINE ISOLATION]
-    Strict chronological sorting is enforced prior to feature computation to prevent "Lookahead Bias".
-    By shifting rolling aggregates (rolling average, rolling strike rate, recent form score) by 1 match,
-    we ensure the model only uses historical feature rows relative to the match being predicted.
-    
-    This temporal isolation blocks the global mean "Context-Averaging Bug" (which collapses predictions 
-    to a flat ~36.5 run average) by ensuring we construct distinct, historical player-specific trajectories 
-    rather than mixing future data points or global averages into the player profile features.
+    All features are computed in chronological order with a shift(1) so that
+    each row only contains information available before that match was played.
+    This prevents lookahead bias — the rolling average, strike rate, and form
+    score for match N are computed from matches 1 through N-1 only.
     """
     player_name, group, venue_map = args
     # Sort chronologically to prevent lookahead bias

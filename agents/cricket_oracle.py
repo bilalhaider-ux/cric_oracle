@@ -245,11 +245,11 @@ def load_player_data(
 
 def verify_agent_output_safety(predicted_runs):
     """
-    Core context validation guardrail to ensure output matrix integrity.
+    Clamps the prediction to a physically valid range.
+    T20 individual scores can't go below 0 or above 175 (world record).
     """
-    # Clamp absolute bounds based on realistic athletic capacities
     MIN_SAFE_BOUND = 0.0
-    MAX_SAFE_BOUND = 175.0 # Max realistic individual score in T20s
+    MAX_SAFE_BOUND = 175.0  # Chris Gayle 175* vs PWI (2013)
     
     if not (MIN_SAFE_BOUND <= predicted_runs <= MAX_SAFE_BOUND):
         # Override corrupted outliers with dynamic historical baseline
@@ -372,9 +372,24 @@ def predict_runs(
     ci_upper = float(np.percentile(bootstrap_predictions, 97.5))
     ci_width = ci_upper - ci_lower
 
-    # T20 cricket is inherently high-variance; a CI threshold of 40 was too
-    # strict and flagged too many valid players as insufficient_data.
+    # T20 cricket is inherently high-variance; a CI > 60 means the model is
+    # too uncertain to be useful.  Before giving up, the agent tries a smarter
+    # fallback: if the user asked for a specific match type (international /
+    # league) but there aren't enough of those matches, widen the training set
+    # to all match types and re-run.  This is an agent-level decision — the
+    # predictor autonomously recovers from low-confidence without user input.
     if ci_width > 60:
+        if match_filter != "all":
+            # Agent decision: retry with the broader "all" filter
+            fallback = predict_runs(player_name, match_filter="all",
+                                    tool_context=tool_context)
+            if fallback.get("status") == "success":
+                fallback["agent_fallback"] = (
+                    f"Insufficient {match_filter} data (CI {ci_width:.0f} runs). "
+                    f"Automatically widened to all match types for a reliable estimate."
+                )
+                return fallback
+        # All-filter also failed — genuinely insufficient data
         msg = (
             f"insufficient data: Prediction confidence is too low (95% CI width "
             f"{ci_width:.1f} runs). This player's scoring is too volatile or their "
@@ -424,7 +439,7 @@ def create_predictor_agent():
         model="gemini-2.5-flash",
         instruction="""You are the PredictorAgent. Your job is to predict batting runs for the requested player.
 Always use the predict_runs tool to train the model and generate the point prediction and confidence intervals.
-Summarize the results. If the confidence interval width is greater than 40, explicitly say 'insufficient data'.""",
+Summarize the results. If the confidence interval width is greater than 60, explicitly say 'insufficient data'.""",
         description="Trains XGBoost and predicts runs with bootstrapped confidence intervals.",
         tools=[predict_runs],
     )

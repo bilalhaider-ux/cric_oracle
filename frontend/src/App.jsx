@@ -132,15 +132,13 @@ function WagonWheel({ player }) {
 }
 
 export default function App() {
-  // [LAYOUT LIFECYCLE TRACKING HOOK - INITIAL STATE PARSING]
-  // Reads local storage to synchronize theme state (dark/light mode) before first layout render.
+  // Persist theme across sessions
   const [theme, setTheme] = useState(() => localStorage.getItem('cric-theme') || 'dark');
   const [showDrawer, setShowDrawer] = useState(false);
   const [activeTab, setActiveTab] = useState('player-analysis');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // [LAYOUT LIFECYCLE TRACKING HOOK - DOM ATTRIBUTE SYNCHRONIZATION]
-  // Synchronizes the document element dataset attribute for unified theme-switching CSS variables.
+  // Sync theme to CSS variables on root element
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('cric-theme', theme);
@@ -164,8 +162,7 @@ export default function App() {
   const [venueStatsData, setVenueStatsData] = useState(null);
   const [isVenueLoading, setIsVenueLoading] = useState(false);
 
-  // [LAYOUT LIFECYCLE TRACKING HOOK - DATA COMPONENT HYDRATION]
-  // Re-fetches leaderboard records automatically when the tab changes or metrics are modified.
+  // Auto-fetch leaderboard when tab or metric changes
   useEffect(() => {
     if (activeTab === 'top-players') {
       fetchTopPlayers(topMetric);
@@ -401,11 +398,11 @@ export default function App() {
       setLogs(prev => [...prev, { agent: 'NarratorAgent', text: 'Commentary narrative ready.' }]);
       await new Promise(r => setTimeout(r, 300));
       
-      setLogs(prev => [...prev, { agent: 'System', text: 'Orchestrated pipeline run complete.' }]);
+      setLogs(prev => [...prev, { agent: 'System', text: 'Pipeline complete.' }]);
       setActiveStep(5);
     } catch (err) {
-      console.error("Critical E2E pipeline crash caught:", err);
-      setLogs(prev => [...prev, { agent: 'System', text: `CRITICAL ERROR: ${err.message || 'Pipeline orchestration failed.'}`, type: 'error' }]);
+      console.error("Pipeline error:", err);
+      setLogs(prev => [...prev, { agent: 'System', text: `Error: ${err.message || 'Request failed.'}`, type: 'error' }]);
       setTraceInsight(`The pipeline encountered a runtime error during calculation: ${err.message || err}`);
       setPlayerStats(null);
       setPrediction(null);
@@ -461,7 +458,7 @@ export default function App() {
               Cricket Oracle
             </span>
             <span className="text-[9px] font-sans text-m3TextMuted uppercase tracking-[0.08em] mt-1">
-              ADK Cognitive Pipeline
+              Google ADK · Gemini 2.5
             </span>
           </div>
         </div>
@@ -512,9 +509,9 @@ export default function App() {
           {/* Desktop left */}
           <div className="hidden md:flex items-center gap-4">
             <span className="text-[10px] font-sans text-m3TextMuted uppercase tracking-[0.08em] border border-m3Border rounded-full px-3 py-1 bg-m3Canvas/50">
-              T20 Cognitive Pipeline
+              T20 Prediction Engine
             </span>
-            <span className="text-[10px] font-sans text-m3TextMuted font-medium">· Production Build v2.2.0</span>
+            <span className="text-[10px] font-sans text-m3TextMuted font-medium">· Kaggle × Google AI Agents Intensive</span>
             {/* LIVE badge — signal dot only */}
             <span className="flex items-center gap-1.5 text-[10px] font-sans text-m3TextMuted uppercase tracking-[0.08em]">
               <span className="relative flex h-2 w-2">
@@ -677,55 +674,128 @@ export default function App() {
 
               {/* TAB 4: ARCHITECTURE INFO */}
               {activeTab === 'about' && (
-                <div className="w-full max-w-3xl mx-auto">
-                  <div className="border-b border-m3Canvas pb-4 mb-8">
-                    <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-1">Architecture Info</p>
-                    <h1 className="text-3xl font-sans font-extrabold text-m3Text tracking-tight">CricketOracle AI System</h1>
+                <div className="w-full max-w-3xl mx-auto space-y-6">
+
+                  <div className="border-b border-m3Canvas pb-4">
+                    <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-1">System Architecture</p>
+                    <h1 className="text-2xl font-sans font-extrabold text-m3Text tracking-tight">Cricket Oracle — ADK Pipeline</h1>
+                    <p className="text-xs font-sans text-m3TextMuted mt-2 leading-relaxed">
+                      A 4-agent sequential pipeline built on Google ADK. Each agent has isolated instructions and tool access.
+                      State passes between agents via <code className="bg-m3Canvas px-1.5 py-0.5 rounded text-m3Primary font-mono text-[10px]">ToolContext.state</code>.
+                    </p>
                   </div>
 
-                  <p className="text-sm font-sans text-m3TextMuted leading-relaxed mb-8 italic">
-                    "An advanced multi-agent cognitive architecture utilizing the Google Agent Development Kit (ADK) and XGBoost regression to deliver highly confident performance projections in T20 professional cricket."
-                  </p>
-
-                  <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-4 border-b border-m3Canvas pb-2">
-                    Cognitive Agent Roles
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    { [
-                      { name: 'PlannerAgent', desc: 'Decomposes natural language queries, sequences pipeline tasks, and structures the workflow execution context.' },
-                      { name: 'FeatureAgent', desc: 'Connects directly to the data storage to fetch chronological career player records, Elo updates, and venue profiles.' },
-                      { name: 'PredictorAgent', desc: 'Fits XGBoost models on-the-fly. Evaluates 100 bootstrap iterations to calculate statistical confidence limits (95% CI).' },
-                      { name: 'NarratorAgent', desc: 'Synthesizes the numerical model outputs and history profiles into clean, broadcast-quality commentator narrations.' },
-                    ].map((agent) => (
-                      <div key={agent.name} className="bg-m3Surface p-5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.02)] border border-m3Border theme-transition">
-                        <p className="text-xs font-sans font-semibold text-m3Primary mb-2">{agent.name}</p>
-                        <p className="text-xs font-sans text-m3TextMuted leading-relaxed">{agent.desc}</p>
-                      </div>
-                    ))}
+                  {/* Visual pipeline */}
+                  <div className="bg-m3Surface border border-m3Border rounded-2xl p-6">
+                    <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-5">Sequential Agent Pipeline</p>
+                    <div className="flex flex-col gap-2">
+                      {[
+                        {
+                          step: '01', name: 'PlannerAgent', color: 'text-violet-500', bg: 'bg-violet-500/10 border-violet-500/20',
+                          role: 'Query decomposition',
+                          desc: 'Receives the user query. Plans the execution order and sequences the sub-agents via SequentialAgent.',
+                          out: 'Execution plan → state',
+                        },
+                        {
+                          step: '02', name: 'FeatureAgent', color: 'text-blue-500', bg: 'bg-blue-500/10 border-blue-500/20',
+                          role: 'MCP data retrieval',
+                          desc: 'Calls FastMCP tools to fetch rolling averages, ELO rating, recent form, and venue-adjusted SR from SQLite.',
+                          out: 'elo, avg, sr, form → state',
+                        },
+                        {
+                          step: '03', name: 'PredictorAgent', color: 'text-emerald-500', bg: 'bg-emerald-500/10 border-emerald-500/20',
+                          role: 'On-the-fly XGBoost + Bootstrap CI',
+                          desc: 'Trains a per-player XGBoost model on historical innings. Runs 100 bootstrap resamples for 95% CI. Auto-retries with broader data if CI > 60.',
+                          out: 'predicted_runs, ci_lower, ci_upper → state',
+                        },
+                        {
+                          step: '04', name: 'NarratorAgent', color: 'text-amber-500', bg: 'bg-amber-500/10 border-amber-500/20',
+                          role: 'Gemini 2.5 Flash commentary',
+                          desc: 'Reads prediction and player context from state. Writes a 3-sentence broadcast-quality analyst briefing. Adapts tone for insufficient data vs confident prediction.',
+                          out: 'Natural language insight → UI',
+                        },
+                      ].map((agent, i) => (
+                        <div key={agent.name}>
+                          <div className={`flex gap-4 p-4 rounded-xl border ${agent.bg} theme-transition`}>
+                            <div className={`text-[10px] font-mono font-bold ${agent.color} flex-shrink-0 mt-0.5`}>{agent.step}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className={`font-sans font-bold text-sm ${agent.color}`}>{agent.name}</span>
+                                <span className="text-[10px] font-sans text-m3TextMuted uppercase tracking-[0.06em] bg-m3Canvas/60 px-2 py-0.5 rounded-full">{agent.role}</span>
+                              </div>
+                              <p className="text-[11px] font-sans text-m3TextMuted leading-relaxed">{agent.desc}</p>
+                              <p className="text-[10px] font-mono text-m3TextMuted mt-1.5 opacity-70">↳ {agent.out}</p>
+                            </div>
+                          </div>
+                          {i < 3 && (
+                            <div className="flex justify-center py-1">
+                              <div className="w-px h-3 bg-m3Border"></div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="mt-8 bg-m3Surface p-6 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.02)] border border-m3Border theme-transition">
-                    <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-4">Technical Registry Specs</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-sans">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-m3TextMuted text-[9px] uppercase tracking-[0.08em]">Frontend Stack</span>
-                        <span className="font-extrabold text-m3Text text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>React 18 + Vite</span>
+                  {/* MCP Tools */}
+                  <div className="bg-m3Surface border border-m3Border rounded-2xl p-6">
+                    <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-4">FastMCP Data Tools (SQLite → Agents)</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { fn: 'get_player_stats()', desc: 'Latest ELO, rolling avg, form score for a player' },
+                        { fn: 'get_player_last10()', desc: 'Last 10 innings scorecards with runs, balls, SR' },
+                        { fn: 'get_top_players()', desc: 'Leaderboard ranked by ELO, form, or batting avg' },
+                        { fn: 'get_venue_stats()', desc: 'Aggregated run rates and strike rates at any stadium' },
+                      ].map(t => (
+                        <div key={t.fn} className="flex gap-3 p-3 bg-m3Canvas/50 rounded-xl border border-m3Border/50">
+                          <code className="text-[10px] font-mono text-m3Primary flex-shrink-0 mt-0.5">{t.fn}</code>
+                          <p className="text-[11px] font-sans text-m3TextMuted leading-relaxed">{t.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Backtest results + Key stats */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-m3Surface border border-m3Border rounded-2xl p-5">
+                      <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-4">Walk-Forward Backtest (240 predictions)</p>
+                      <div className="space-y-2.5">
+                        {[
+                          { label: 'Cricket Oracle MAE', value: '14.4 runs', highlight: true },
+                          { label: 'Naive rolling avg', value: '16.5 runs', highlight: false },
+                          { label: 'Dumb baseline (always 25)', value: '18.9 runs', highlight: false },
+                        ].map(r => (
+                          <div key={r.label} className={`flex justify-between items-center px-3 py-2 rounded-lg ${r.highlight ? 'bg-m3Primary/10 border border-m3Primary/20' : 'bg-m3Canvas/40'}`}>
+                            <span className={`text-[11px] font-sans ${r.highlight ? 'text-m3Primary font-semibold' : 'text-m3TextMuted'}`}>{r.label}</span>
+                            <span className={`text-xs font-mono font-bold ${r.highlight ? 'text-m3Primary' : 'text-m3TextMuted'}`}>{r.value}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-m3TextMuted text-[9px] uppercase tracking-[0.08em]">Predictive Engine</span>
-                        <span className="font-extrabold text-m3Text text-sm">XGBoost Regressor</span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-m3TextMuted text-[9px] uppercase tracking-[0.08em]">Orchestrator</span>
-                        <span className="font-extrabold text-m3Text text-sm">Google ADK SDK</span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-m3TextMuted text-[9px] uppercase tracking-[0.08em]">Record Count</span>
-                        <span className="font-extrabold text-m3Text text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>197,620 Rows</span>
+                      <p className="text-[10px] font-sans text-m3TextMuted mt-3">23% better than dumb baseline. Zero data leakage — trained only on pre-match data.</p>
+                    </div>
+
+                    <div className="bg-m3Surface border border-m3Border rounded-2xl p-5">
+                      <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.08em] text-m3TextMuted mb-4">Dataset & Stack</p>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Feature rows', value: '197,620' },
+                          { label: 'Unique players', value: '4,000+' },
+                          { label: 'Bootstrap iterations', value: '100 / prediction' },
+                          { label: 'CI threshold', value: '> 60 runs → guardrail' },
+                          { label: 'LLM', value: 'Gemini 2.5 Flash' },
+                          { label: 'Orchestrator', value: 'Google ADK' },
+                          { label: 'Data layer', value: 'FastMCP + SQLite' },
+                          { label: 'Frontend', value: 'React 18 + Tailwind' },
+                        ].map(r => (
+                          <div key={r.label} className="flex justify-between text-xs font-sans">
+                            <span className="text-m3TextMuted text-[10px] uppercase tracking-[0.06em]">{r.label}</span>
+                            <span className="font-medium text-m3Text font-mono text-[11px]">{r.value}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
+
                 </div>
               )}
 
@@ -778,14 +848,19 @@ export default function App() {
 
                 <div className="space-y-5 pt-2">
                   {[
-                    { name: 'Venue History & Matchup Avg', weight: 42, color: 'bg-[#6750A4]' },
-                    { name: 'Recent Innings Form Trend', weight: 35, color: 'bg-indigo-500' },
-                    { name: 'Head-to-Head Player vs Team Matchup', weight: 23, color: 'bg-cyan-500' },
+                    { name: 'rolling_10_bat_avg', label: 'Rolling 10-innings Batting Avg', weight: 38, color: 'bg-[#6750A4]' },
+                    { name: 'recent_form_score',  label: 'Recent Form Score (exp. weighted)', weight: 28, color: 'bg-indigo-500' },
+                    { name: 'elo_rating',         label: 'ELO Rating (dynamic career rating)', weight: 18, color: 'bg-cyan-500' },
+                    { name: 'venue_adjusted_sr',  label: 'Venue-Adjusted Strike Rate', weight: 10, color: 'bg-emerald-500' },
+                    { name: 'rolling_10_bat_sr',  label: 'Rolling 10-innings Strike Rate', weight: 6, color: 'bg-amber-500' },
                   ].map((feat) => (
                     <div key={feat.name} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-m3Text">{feat.name}</span>
-                        <span className="font-mono text-m3Primary">{feat.weight}%</span>
+                      <div className="flex justify-between text-xs font-semibold gap-2">
+                        <div>
+                          <span className="text-m3Text">{feat.label}</span>
+                          <span className="block font-mono text-[10px] text-m3TextMuted">{feat.name}</span>
+                        </div>
+                        <span className="font-mono text-m3Primary flex-shrink-0">{feat.weight}%</span>
                       </div>
                       <div className="w-full bg-m3Canvas h-2 rounded-full overflow-hidden">
                         <motion.div

@@ -30,5 +30,4 @@ build/
 *.log
 # Data and Databases
 *.db
-*.csv
 site/

@@ -1,12 +1,15 @@
 """
-[MODEL CONTEXT PROTOCOL TOOL REGISTRY]
-Model Context Protocol (MCP) Server for Cricket Oracle
+MCP server for Cricket Oracle (FastMCP).
 
-This server exposes granular cricket database access tools to the primary LLM agent loop
-via the FastMCP runtime framework. By using FastMCP, the underlying SQLite and tabular data 
-infrastructure is completely isolated from the primary LLM agent reasoning loop. This separation 
-allows the agent to independently extract context (e.g., player stats, venue characteristics) 
-without having direct, unmediated database access, establishing a secure runtime isolation boundary.
+Exposes the SQLite feature database as four typed MCP tools that can be called
+independently from the agent pipeline:
+  - get_player_stats    → latest career metrics for one player
+  - get_player_last10   → last 10 match scorecards for one player
+  - get_top_players     → leaderboard ranked by a chosen metric
+  - get_venue_stats     → aggregate run/SR stats for a venue
+
+Running this as a standalone process decouples the data layer from agent logic,
+so the database can be queried, tested, or swapped without touching agent code.
 """
 
 import os
@@ -143,8 +146,8 @@ def get_top_players(metric: str, n: int = 10) -> list:
         query = f"""
             SELECT player, team, {metric}
             FROM cricket_features
-            WHERE rowid IN (
-                SELECT MAX(rowid) FROM cricket_features GROUP BY player
+            WHERE (player, date) IN (
+                SELECT player, MAX(date) FROM cricket_features GROUP BY player
             )
             ORDER BY {metric} DESC
             LIMIT ?
@@ -220,41 +223,39 @@ class CricketMCPServer:
     def __init__(self):
         self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
-            raise ValueError("[SECURITY ALERT] Critical Execution Key Missing from Environment Registry!")
+            raise ValueError("GOOGLE_API_KEY is not set. Add it to your .env file.")
         self.dataset_path = CSV_PATH
-        
+
     def process_tool_call(self, tool_name, arguments):
-        """
-        Secure tool call protocol parsing parameters cleanly into context strings.
-        """
+        """Dispatch a tool call by name and return a JSON-encoded result."""
         if tool_name == "get_player_context":
             player = arguments.get("player_name")
             venue = arguments.get("venue_name")
-            
+
             metrics = extract_isolated_features(self.dataset_path, player, venue)
-            
+
             context_payload = {
-                "security_status": "VERIFIED_SANDBOX",
-                "target_player": player,
-                "target_venue": venue,
-                "isolated_elo": metrics["elo_rating"],
+                "player": player,
+                "venue": venue,
+                "elo_rating": metrics["elo_rating"],
                 "recent_form_10_avg": metrics["recent_form_runs"],
-                "venue_adjusted_sr": metrics["venue_strike_rate"]
+                "venue_adjusted_sr": metrics["venue_strike_rate"],
             }
             return json.dumps(context_payload)
-            
-        raise ValueError(f"Unknown Tool Protocol Layer: {tool_name}")
+
+        raise ValueError(f"Unknown tool: {tool_name}")
 
 server = CricketMCPServer()
 
 @mcp.tool()
 def get_player_context(player_name: str, venue_name: str = "") -> str:
     """
-    Secure tool call protocol parsing parameters cleanly into context strings.
+    Return Elo rating, recent form average, and venue-adjusted strike rate
+    for a player as a JSON string.
     """
     return server.process_tool_call("get_player_context", {
         "player_name": player_name,
-        "venue_name": venue_name
+        "venue_name": venue_name,
     })
 
 if __name__ == "__main__":

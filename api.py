@@ -1,29 +1,22 @@
 """
-[GOOGLE ADK SDK PIPELINE ORCHESTRATION]
-FastAPI Orchestration Layer
+FastAPI service layer for Cricket Oracle.
 
-This module serves as the primary backend orchestration layer bridging the React frontend 
-to the Google ADK agent pipeline, SQLite database, and the Model Context Protocol (MCP) tool functions. 
-It exposes REST endpoints for player statistics, predictive run modeling, venue performance analysis, 
-and fuzzy search capabilities.
+Bridges the React frontend to the Google ADK agent pipeline, SQLite database,
+and MCP tool functions. Exposes REST endpoints for player statistics, run
+predictions, top-player leaderboards, venue analytics, and player search.
 """
 
 import os
 import sys
-import json  # <-- FIXED: Added missing json library import
+import json
 from dotenv import load_dotenv
 
-# Load local environment configuration setup
 load_dotenv()
 
-# [SECURITY GUARDRAIL]
-# Immediate environment validation check on startup. The application refuses to start 
-# if GOOGLE_API_KEY is not defined, preventing runtime failures mid-request when calling 
-# the underlying Gemini LLM agent pipeline.
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
-    raise ValueError("[SECURITY ALERT] Critical Execution Key Missing from Environment Registry!")
+    raise ValueError("GOOGLE_API_KEY is not set. Add it to your .env file.")
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
@@ -81,10 +74,8 @@ def api_player_stats(
     Returns:
     - dict: A dictionary containing aggregated statistics, status, and metadata.
     """
-    # [ANTI-CORTEXT-AVERAGING VALIDATION]
-    # The match_filter allows the caller to separate 'international' and 'league' (e.g. IPL) matches.
-    # This prevents the statistical model from averaging performance across disparate playing contexts,
-    # resolving the global context-averaging bug where players' stats collapse to a non-representative mean.
+    # match_filter separates 'international' from franchise 'league' data so the
+    # model is trained only on the relevant competition context.
     if match_filter not in VALID_FILTERS:
         raise HTTPException(
             status_code=400,
@@ -101,51 +92,60 @@ def api_predict(
     match_filter: str = Query(default="all", description="Filter: 'all' | 'international' | 'league'"),
 ):
     """
-    Predict a player's runs for an upcoming match using statistical modeling combined with LLM insights.
+    Predict a player's runs using the per-player XGBoost model, then generate a
+    broadcast-quality narrative via the ADK multi-agent pipeline.
 
-    [GOOGLE ADK SDK PIPELINE ORCHESTRATION]
-    This route sandboxes downstream execution of the LLM oracle agent. It maps the system key to
-    the runtime process environment (`os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY`) dynamically 
-    and only if valid, avoiding exposing hardcoded key registries or secrets inside the codebase.
+    The statistical prediction (point estimate + 95% CI) is computed first so the
+    NarratorAgent's insight is grounded in the exact numbers returned to the caller —
+    keeping the UI values and the narrative text consistent.
 
     Parameters:
-    - player_name (str): The name of the player to run predictions on.
-    - match_filter (str): Filter for training data context. Must be 'all', 'international', or 'league'.
-
-    Returns:
-    - dict: A dictionary containing predicted runs, confidence interval limits, LLM insights, and training metadata.
+    - player_name: Player name (case-insensitive, fuzzy-matched).
+    - match_filter: 'all' | 'international' | 'league' — scopes the training data.
     """
-    # [ANTI-CORTEXT-AVERAGING VALIDATION]
-    # Restricts the regression dataset to the requested competition domain. This isolates domain-specific
-    # features and prevents mixing international profiles with domestic leagues, mitigating the context-averaging bug.
     if match_filter not in VALID_FILTERS:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid match_filter '{match_filter}'. Must be one of: {sorted(VALID_FILTERS)}",
         )
 
-    if "GOOGLE_API_KEY" not in os.environ and GOOGLE_API_KEY:
-        os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-
-    try:
-        insight = run_oracle(f"How will {player_name} perform?")
-    except Exception as e:
-        insight = f"ADK Pipeline Execution failed: {e}. Set GOOGLE_API_KEY environment variable."
-
+    # Step 1: Run statistical prediction first so we have concrete numbers.
     pred_res = predict_runs(player_name, match_filter=match_filter)
     if pred_res.get("status") == "error":
         raise HTTPException(status_code=404, detail=pred_res.get("message"))
 
+    # Step 2: Build an oracle query that includes the actual prediction numbers so
+    # the NarratorAgent's commentary matches what the UI displays.
+    if "GOOGLE_API_KEY" not in os.environ and GOOGLE_API_KEY:
+        os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+
+    if pred_res.get("status") == "insufficient_data":
+        oracle_query = (
+            f"How will {player_name} perform? Note: the statistical model returned "
+            f"insufficient data (CI width {pred_res.get('ci_width', 0):.1f} runs)."
+        )
+    else:
+        oracle_query = (
+            f"How will {player_name} perform? The model predicts "
+            f"{pred_res.get('predicted_runs', 0):.1f} runs "
+            f"(95% CI: {pred_res.get('ci_lower', 0):.1f}–{pred_res.get('ci_upper', 0):.1f})."
+        )
+
+    try:
+        insight = run_oracle(oracle_query)
+    except Exception as e:
+        insight = f"Narrative generation failed: {e}"
+
     return {
-        "status":        pred_res.get("status"),
+        "status":         pred_res.get("status"),
         "predicted_runs": pred_res.get("predicted_runs", 0.0),
-        "ci_lower":      pred_res.get("ci_lower", 0.0),
-        "ci_upper":      pred_res.get("ci_upper", 0.0),
-        "ci_width":      pred_res.get("ci_width", 0.0),
-        "insight":       insight,
-        "message":       pred_res.get("message", ""),
-        "match_filter":  match_filter,
-        "training_rows": pred_res.get("training_rows", 0),
+        "ci_lower":       pred_res.get("ci_lower", 0.0),
+        "ci_upper":       pred_res.get("ci_upper", 0.0),
+        "ci_width":       pred_res.get("ci_width", 0.0),
+        "insight":        insight,
+        "message":        pred_res.get("message", ""),
+        "match_filter":   match_filter,
+        "training_rows":  pred_res.get("training_rows", 0),
     }
 
 @app.get("/api/top-players")
@@ -181,10 +181,8 @@ def api_venue_stats(venue_name: str):
         raise HTTPException(status_code=404, detail=res["error"])
     return res
 
-# [MEMORY CACHE FOR AUTOCOMPLETE]
-# Simple in-memory list caching the unique player list retrieved from SQLite. 
-# This avoids querying SQLite on every keystroke of the search-as-you-type frontend feature,
-# ensuring sub-millisecond response latency.
+# In-memory cache for the player name list used by the search autocomplete.
+# Populated on first request, avoids hitting SQLite on every keystroke.
 _PLAYER_NAMES_CACHE: list[str] | None = None
 
 def _load_player_names() -> list[str]:

@@ -1,0 +1,22 @@
+# Cricket Oracle — Python backend dependencies
+# Install with: pip install -r requirements.txt
+
+# Data & ML
+pandas>=2.1.0
+numpy>=1.26.0
+xgboost>=2.0.0
+scikit-learn>=1.4.0
+
+# Google ADK + Gemini
+google-adk>=0.5.0
+google-genai>=0.8.0
+
+# MCP server
+mcp>=1.0.0
+
+# API layer
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+
+# Utilities
+python-dotenv>=1.0.0

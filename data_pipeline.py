@@ -1,12 +1,12 @@
 """
-[CRITICAL ANTI-CORRUPTION LAYER]
-Data Pipeline, Feature Engineering & ETL Processes
+Data pipeline and feature engineering for Cricket Oracle.
 
-This module defines the extraction, transformation, and load (ETL) pipeline for parsing
-raw CricSheet T20 JSON matches, calculating player career metrics, establishing Elo ratings,
-and preparing features for machine learning modeling.
+Parses raw CricSheet T20 JSON match files, computes per-player career metrics
+(rolling averages, exponential-decay form scores, venue-adjusted strike rate,
+Elo ratings), and writes the engineered feature table to cricket_features.csv.
 
-It enforces structural integrity and chronological boundary separation to prevent lookahead bias.
+All features are constructed using only information available before each match
+— no lookahead bias by design.
 """
 
 import os
@@ -493,23 +493,10 @@ def extract_isolated_features(dataset_path: str, player: str, venue: str = "") -
     }
 
 
-def verify_agent_output_safety(predicted_runs):
-    """
-    Core context validation guardrail to ensure output matrix integrity.
-    """
-    # Clamp absolute bounds based on realistic athletic capacities
-    MIN_SAFE_BOUND = 0.0
-    MAX_SAFE_BOUND = 175.0 # Max realistic individual score in T20s
-    
-    if not (MIN_SAFE_BOUND <= predicted_runs <= MAX_SAFE_BOUND):
-        # Override corrupted outliers with dynamic historical baseline
-        return float(np.clip(predicted_runs, MIN_SAFE_BOUND, MAX_SAFE_BOUND))
-        
-    return predicted_runs
-
 
 if __name__ == "__main__":
-    DATA_DIR = r"C:\Users\bilal\OneDrive\Desktop\cric_oracle\cricket_t20_all"
-    OUTPUT_CSV = r"C:\Users\bilal\OneDrive\Desktop\cric_oracle\cricket_features.csv"
-    
+    _base = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(_base, "cricket_t20_all")
+    OUTPUT_CSV = os.path.join(_base, "cricket_features.csv")
+
     build_data_pipeline(DATA_DIR, OUTPUT_CSV)

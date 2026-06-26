@@ -2,14 +2,12 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Load local environment configuration setup
 load_dotenv()
 
-# Secure token retrieval from the active sandbox runtime boundary
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
-    raise ValueError("[SECURITY ALERT] Critical Execution Key Missing from Environment Registry!")
+    raise ValueError("GOOGLE_API_KEY is not set. Add it to your .env file.")
 
 import asyncio
 import pandas as pd
@@ -19,8 +17,8 @@ from google.adk.agents import Agent, SequentialAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 
-# Define paths
-BASE_DIR = r"C:\Users\bilal\OneDrive\Desktop\cric_oracle"
+# Paths — resolved relative to this file so the project is portable
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CSV_PATH = os.path.join(BASE_DIR, "cricket_features.csv")
 
 # ── Match-type classifier ─────────────────────────────────────────────────

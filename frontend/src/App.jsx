@@ -19,7 +19,11 @@ import TopPlayers from './components/TopPlayers';
 import VenueStats from './components/VenueStats';
 import { synth } from './hooks/audioSynth';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/';
+// In development, fall back to localhost. In production, VITE_API_URL must be set
+// in Vercel environment variables — without it, calls to http://localhost from an
+// HTTPS page trigger Chrome's Private Network Access permission dialog on mobile.
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:8001/api/' : '');
 
 // Wagon Wheel — paper theme
 // Wagon Wheel — minimal dark vector theme

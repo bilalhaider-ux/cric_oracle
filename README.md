@@ -1,3 +1,13 @@
+---
+title: Cricket Oracle API
+emoji: 🏏
+colorFrom: purple
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🏏 Cricket Oracle
 
 **A multi-agent statistical reasoning system for T20 batting performance prediction — built natively on Google's Agent Development Kit, served through a custom MCP runtime, with zero data leakage by construction.**
